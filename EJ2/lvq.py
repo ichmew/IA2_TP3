@@ -110,7 +110,7 @@ def alfa(mu):
     return a
 
 
-def aprendizaje_kohonen(Wentrada, Wijk):
+def aprendizaje_kohonen(Wentrada, Wijk, mu):
     # Modifica los pesos de la neurona más adecuada a la entrada y los de las
     # neuronas inmediatas a ella
     min_x, min_y = comparacion(Wentrada, Wijk)
