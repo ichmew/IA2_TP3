@@ -25,6 +25,7 @@ def genera_pendulo():
     # tabla de verdades de la lógica difusa
 
     dataset_pendulo = np.random.rand(EJEMPLOS_CANT, 3)
+    dataset_pendulo_norm = np.zeros([EJEMPLOS_CANT, 3])
 
     # Definición de reglas (0,0) = (pos:NF, vel:NF)
     REGLAS = [['PF', 'PF', 'PF', 'PP', 'Z'],
@@ -167,12 +168,26 @@ def genera_pendulo():
         dataset_pendulo[mu][1] = float(pos)
         dataset_pendulo[mu][2] = float(vel)
     # print(dataset_pendulo)
+
+    # Normalizado del dataset
+    fmaxima = 0
+    for mu in range(0, EJEMPLOS_CANT):
+        if dataset_pendulo[mu][0] > fmaxima:
+            fmaxima = dataset_pendulo[mu][0]
+
+    for mu in range(0, EJEMPLOS_CANT):
+        dataset_pendulo_norm[mu][0] = dataset_pendulo[mu][0] / fmaxima
+        dataset_pendulo_norm[mu][1] = dataset_pendulo[mu][1]
+        dataset_pendulo_norm[mu][2] = dataset_pendulo[mu][2]
+
     df = pd.DataFrame(dataset_pendulo)
     df.to_csv('prueba_dataset_pendulo.csv')
-    return dataset_pendulo
+    dfn = pd.DataFrame(dataset_pendulo_norm)
+    dfn.to_csv('prueba_dataset_pendulo_norm.csv')
+    return dataset_pendulo, dataset_pendulo_norm
 
 
-def training(dataset_pendulo):
+def training(dataset_pendulo, dataset_pendulo_norm):
     # Se encarga de actualizar los pesos de la red y de calcular la desviación
     # de los valores obtenidos respecto a los labels
 
@@ -191,14 +206,22 @@ def training(dataset_pendulo):
             Wji, Wkj = bp(Wji, Wkj, x, y, z, t)
 
         # Verificación de errores
+        plot_z = np.zeros(cant_ej_training)
+        plot_t = np.zeros(cant_ej_training)
         plot_error = np.arange(cant_ej_training)
         error_relativo = np.zeros(cant_ej_training)
         error_promedio = 0
         for mu in range(0, cant_ej_training):
             x = dataset_pendulo[mu][1:]
-            t = dataset_pendulo[mu][0]
+            t = dataset_pendulo_norm[mu][0]
             x, y, z = calculo_salidas(Wji, Wkj, x, y, z)
-            error_relativo[mu] = abs((z - t) / (t + 0.01))
+            plot_z[mu] = z
+            plot_t[mu] = t
+        max_z = np.amax(plot_z)
+        # Normalización de z
+        for mu in range(0, cant_ej_training):
+            plot_z[mu] /= max_z
+            error_relativo[mu] = abs(plot_t[mu] - plot_z[mu])
             error_promedio += error_relativo[mu]
         error_promedio = error_promedio / cant_ej_training
         print('Epoch ', e, ': ', error_promedio, '\n')
@@ -212,7 +235,7 @@ def training(dataset_pendulo):
     return Wji, Wkj
 
 
-def validation(dataset_pendulo, Wji, Wkj):
+def validation(dataset_pendulo, dataset_pendulo_norm, Wji, Wkj):
     # Funge como prueba test. Calcula las desviaciones de los valores
     # obtenidos para ejemplos de entrenamiento que no han pasado por la red.
 
@@ -227,11 +250,15 @@ def validation(dataset_pendulo, Wji, Wkj):
 
     for mu in range(cant_ej_training, EJEMPLOS_CANT):
         x = dataset_pendulo[mu][1:]
-        t = dataset_pendulo[mu][0]
+        t = dataset_pendulo_norm[mu][0]
         x, y, z = calculo_salidas(Wji, Wkj, x, y, z)
         plot_z[mu - cant_ej_training] = z
         plot_t[mu - cant_ej_training] = t
-        error_relativo[mu - cant_ej_training] = abs((z - t) / (t + 0.01))
+    max_z = np.amax(plot_z)
+    # Normalización de z
+    for mu in range(cant_ej_training, EJEMPLOS_CANT):
+        plot_z[mu - cant_ej_training] /= max_z
+        error_relativo[mu - cant_ej_training] = abs(plot_t[mu - cant_ej_training] - plot_z[mu - cant_ej_training])
         error_promedio += error_relativo[mu - cant_ej_training]
     error_promedio = error_promedio / EJEMPLOS_VAL
     print('Error relativo promedio: ', error_promedio, '\n')
@@ -282,7 +309,8 @@ def calculo_salidas(Wji, Wkj, x, y, z):
         for j in range(0, NEURONAS_CAPA_OCULTA):
             entrada_z += Wkj[j][k] * y[j]
         # Sesgo de las neuronas de la cada de salida
-        entrada_z -= Wkj[NEURONAS_CAPA_OCULTA - 1][k]
+        # entrada_z -= Wkj[NEURONAS_CAPA_OCULTA - 1][k]
+        entrada_z -= 1
         # Valor de salidad de la neurona k
         z[k] = g(entrada_z)
     return x, y, z
