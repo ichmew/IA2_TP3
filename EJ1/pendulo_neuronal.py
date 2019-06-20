@@ -31,13 +31,13 @@ plot_aceleracion.append(ac)
 plot_fuerza.append(Fsal)
 
 print('\nGENERANDO DATASET...\n')
-dataset_pendulo = genera_pendulo()
+dataset_pendulo, dataset_pendulo_norm = genera_pendulo()
 
 print('ENTRENANDO RED...\n')
-Wji, Wkj = training(dataset_pendulo)
+Wji, Wkj = training(dataset_pendulo, dataset_pendulo_norm)
 
 print('VALIDANDO...\n')
-validation(dataset_pendulo, Wji, Wkj)
+validation(dataset_pendulo, dataset_pendulo_norm, Wji, Wkj)
 
 # Funcionamiento del péndulo
 print('EJECUTANDO PÉNDULO...\n')
