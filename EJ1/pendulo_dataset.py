@@ -6,15 +6,13 @@ from matplotlib import pyplot
 
 # Definición de parámetros de la red
 NEURONAS_ENTRADA = 2
-NEURONAS_CAPA_OCULTA = 15
+NEURONAS_CAPA_OCULTA = 20
 NEURONAS_SALIDA = 1
-PORCEN_EJ_VAL = 0.2
-EPSILON = 0.01
-EJEMPLOS_CANT = 500
+PORCEN_EJ_VAL = 0.1
+EPSILON = 0.001
+EJEMPLOS_CANT = 1000
 EJEMPLOS_VAL = int(PORCEN_EJ_VAL * EJEMPLOS_CANT)
-EPOCHS = 3
-CANTIDAD_ENTRADAS_SALIDAS = 1  # depende del dataset, es para el t
-mostrar_e_s = 0
+EPOCHS = 20
 
 cant_ej_training = EJEMPLOS_CANT - EJEMPLOS_VAL
 
@@ -56,7 +54,7 @@ def genera_pendulo():
     for mu in range(0, EJEMPLOS_CANT):
         # Generación de valores random
         pos = random.uniform(- math.pi, math.pi)
-        vel = random.uniform(- math.pi, math.pi)
+        vel = random.uniform(- 0.75 * math.pi, 0.75 * math.pi)
         # Asignacion de los valores a los conjuntos borrosos
         # Posición
         if pos <= uNF:
@@ -167,7 +165,6 @@ def genera_pendulo():
         dataset_pendulo[mu][0] = float(Fsal)
         dataset_pendulo[mu][1] = float(pos)
         dataset_pendulo[mu][2] = float(vel)
-    # print(dataset_pendulo)
 
     # Normalizado del dataset
     fmaxima = 0
@@ -191,8 +188,10 @@ def training(dataset_pendulo, dataset_pendulo_norm):
     # Se encarga de actualizar los pesos de la red y de calcular la desviación
     # de los valores obtenidos respecto a los labels
 
-    Wji = np.zeros([NEURONAS_ENTRADA, NEURONAS_CAPA_OCULTA])
-    Wkj = np.zeros([NEURONAS_CAPA_OCULTA, NEURONAS_SALIDA])
+    # Wji = np.zeros([NEURONAS_ENTRADA, NEURONAS_CAPA_OCULTA])
+    # Wkj = np.zeros([NEURONAS_CAPA_OCULTA, NEURONAS_SALIDA])
+    Wji = np.random.rand(NEURONAS_ENTRADA, NEURONAS_CAPA_OCULTA)
+    Wkj = np.random.rand(NEURONAS_CAPA_OCULTA, NEURONAS_SALIDA)
     x = np.zeros(NEURONAS_ENTRADA)
     y = np.zeros(NEURONAS_CAPA_OCULTA)
     z = np.zeros(NEURONAS_SALIDA)
@@ -204,31 +203,38 @@ def training(dataset_pendulo, dataset_pendulo_norm):
             t = dataset_pendulo[mu][0]
             x, y, z = calculo_salidas(Wji, Wkj, x, y, z)
             Wji, Wkj = bp(Wji, Wkj, x, y, z, t)
-
         # Verificación de errores
         plot_z = np.zeros(cant_ej_training)
         plot_t = np.zeros(cant_ej_training)
         plot_error = np.arange(cant_ej_training)
-        error_relativo = np.zeros(cant_ej_training)
+        error_abs = np.zeros(cant_ej_training)
         error_promedio = 0
         for mu in range(0, cant_ej_training):
             x = dataset_pendulo[mu][1:]
-            t = dataset_pendulo_norm[mu][0]
+            t = dataset_pendulo[mu][0]
             x, y, z = calculo_salidas(Wji, Wkj, x, y, z)
             plot_z[mu] = z
             plot_t[mu] = t
-        max_z = np.amax(plot_z)
-        # Normalización de z
-        for mu in range(0, cant_ej_training):
-            plot_z[mu] /= max_z
-            error_relativo[mu] = abs(plot_t[mu] - plot_z[mu])
-            error_promedio += error_relativo[mu]
+            error_abs[mu] = abs(z - t)
+            error_promedio += error_abs[mu]
         error_promedio = error_promedio / cant_ej_training
         print('Epoch ', e, ': ', error_promedio, '\n')
 
+        '''
+        max_z = np.amax(plot_z)
+        # Normalización de z
+        for mu in range(0, cant_ej_training):
+            plot_z[mu] = plot_z[mu] / max_z
+            error_abs[mu] = abs(plot_t[mu] - plot_z[mu])
+            error_promedio += error_abs[mu]
+        error_promedio = error_promedio / cant_ej_training
+        print('Epoch ', e, ': ', error_promedio, '\n')
+        '''
+
         pyplot.figure(e + 1)
-        pyplot.plot(plot_error, error_relativo)
-        pyplot.ylabel('Error relativo')
+        pyplot.plot(plot_error, error_abs)
+        pyplot.plot(error_promedio)
+        pyplot.ylabel('Error absoluto (Newton)')
         pyplot.xlabel('Ejemplos de entrenamiento')
 
     pyplot.show()
@@ -245,27 +251,36 @@ def validation(dataset_pendulo, dataset_pendulo_norm, Wji, Wkj):
     plot_z = np.zeros(EJEMPLOS_VAL)
     plot_t = np.zeros(EJEMPLOS_VAL)
     plot_error = np.arange(EJEMPLOS_VAL)
-    error_relativo = np.zeros(EJEMPLOS_VAL)
+    error_abs = np.zeros(EJEMPLOS_VAL)
     error_promedio = 0
 
     for mu in range(cant_ej_training, EJEMPLOS_CANT):
         x = dataset_pendulo[mu][1:]
-        t = dataset_pendulo_norm[mu][0]
+        t = dataset_pendulo[mu][0]
         x, y, z = calculo_salidas(Wji, Wkj, x, y, z)
         plot_z[mu - cant_ej_training] = z
         plot_t[mu - cant_ej_training] = t
+        error_abs[mu - cant_ej_training] = abs(z - t)
+        error_promedio += error_abs[mu - cant_ej_training]
+    error_promedio = error_promedio / EJEMPLOS_VAL
+    print('Error absoluto promedio (Newton): ', error_promedio, '\n')
+
+    '''
     max_z = np.amax(plot_z)
     # Normalización de z
     for mu in range(cant_ej_training, EJEMPLOS_CANT):
-        plot_z[mu - cant_ej_training] /= max_z
-        error_relativo[mu - cant_ej_training] = abs(plot_t[mu - cant_ej_training] - plot_z[mu - cant_ej_training])
-        error_promedio += error_relativo[mu - cant_ej_training]
+        plot_z[mu - cant_ej_training] = plot_z[mu - cant_ej_training] / max_z
+        error_abs[mu - cant_ej_training] = abs(plot_t[mu - cant_ej_training] -
+        plot_z[mu - cant_ej_training])
+        error_promedio += error_abs[mu - cant_ej_training]
     error_promedio = error_promedio / EJEMPLOS_VAL
-    print('Error relativo promedio: ', error_promedio, '\n')
+    print('Error absoluto promedio: ', error_promedio, '\n')
+    '''
 
     pyplot.figure(1)
-    pyplot.plot(plot_error, error_relativo)
-    pyplot.ylabel('Error relativo validación')
+    pyplot.plot(plot_error, error_abs)
+    pyplot.plot(error_promedio)
+    pyplot.ylabel('Error absoluto validación (Newton)')
     pyplot.xlabel('Ejemplos de entrenamiento validación')
 
     pyplot.figure(2)
@@ -309,10 +324,11 @@ def calculo_salidas(Wji, Wkj, x, y, z):
         for j in range(0, NEURONAS_CAPA_OCULTA):
             entrada_z += Wkj[j][k] * y[j]
         # Sesgo de las neuronas de la cada de salida
-        # entrada_z -= Wkj[NEURONAS_CAPA_OCULTA - 1][k]
-        entrada_z -= 1
+        entrada_z -= Wkj[NEURONAS_CAPA_OCULTA - 1][k]
+        # entrada_z -= 1
         # Valor de salidad de la neurona k
         z[k] = g(entrada_z)
+    # print(z)
     return x, y, z
 
 
@@ -320,6 +336,7 @@ def bp(Wji, Wkj, x, y, z, t):
     # Se encarga de actualizar los pesos sinápticos
 
     delta_mu_k = np.zeros(NEURONAS_SALIDA)
+
     # Actualización pesos capa oculta-capa salida
     for k in range(0, NEURONAS_SALIDA):
         h_mu_k = 0
@@ -329,8 +346,8 @@ def bp(Wji, Wkj, x, y, z, t):
         delta_mu_k[k] = (t - g(h_mu_k)) * g_derivada(h_mu_k)
         for j in range(0, NEURONAS_CAPA_OCULTA):
             Wkj[j][k] += EPSILON * delta_mu_k[k] * y[j]
-
         Wkj[NEURONAS_CAPA_OCULTA - 1][k] += EPSILON * delta_mu_k[k] * - 1
+
     # Actualización pesos capa entrada-capa oculta
     for j in range(0, NEURONAS_CAPA_OCULTA):
         h_mu_j = 0
@@ -340,14 +357,14 @@ def bp(Wji, Wkj, x, y, z, t):
         delta_mu_j = 0
         for k in range(0, NEURONAS_SALIDA):
             delta_mu_j += delta_mu_k[k] * Wkj[j][k]
-        delta_mu_j *= f_derivada(h_mu_j)
+        delta_mu_j = delta_mu_j * f_derivada(h_mu_j)
         for i in range(0, NEURONAS_ENTRADA):
             Wji[i][j] += EPSILON * delta_mu_j * x[i]
         Wji[NEURONAS_ENTRADA - 1][j] += EPSILON * delta_mu_j * -1
     return Wji, Wkj
 
 
-# Función de activación Heavyside de la capa de entrada
+# Función de activación Heavyside (sin usar)
 def Heavy(nox0):
     if nox0 >= 0:
         return 1
@@ -355,26 +372,36 @@ def Heavy(nox0):
         return 0
 
 
-# Derivada de la función de activación Heavyside de la capa de entrada
-def H_derivada(nox4):
+# Derivada de la función de activación Heavyside (sin usar)
+def H_derivada(nox1):
     return 1
 
 
 # Función de activación sigmoide de la capa de entrada
-def f(nox1):
-    return 1 / (1 + math.exp(-nox1))
+def f(nox2):
+    return 1 / (1 + math.exp(-nox2))
 
 
 # Derivada de la función de activación de la capa de entrada
-def f_derivada(nox2):
-    return math.exp(-nox2) / ((1 + math.exp(-nox2)) * (1 + math.exp(-nox2)))
+def f_derivada(nox3):
+    return math.exp(-nox3) / ((1 + math.exp(-nox3)) * (1 + math.exp(-nox3)))
+
+
+# Función de activación sigmoide de la capa de entrada (sin usar)
+def f0(nox4):
+    return math.tanh(nox4)
+
+
+# Derivada de la función de activación de la capa de entrada (sin usar)
+def f0_derivada(nox5):
+    return 1 - math.tanh(nox5)
 
 
 # Función de activación de la capa oculta
-def g(nox3):
-    return nox3
+def g(nox6):
+    return nox6
 
 
 # Derivada de la función de activación de la capa oculta
-def g_derivada(nox3):
+def g_derivada(nox7):
     return 1
