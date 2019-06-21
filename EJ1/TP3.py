@@ -7,7 +7,7 @@
 # Creado el 04/06/2019
 # Inteligencia Artificial II - Ingeniería en Mecatronica
 # Facultad de Ingeniería - Universidad Nacional de Cuyo
-# Autor: Sebastian Giunta, P8 capo, Ichmew
+# Autor: Sebitaxxx, P8 capo, Ichmew
 #
 
 import math
@@ -22,7 +22,7 @@ NEURONAS_CAPA_OCULTA = 20
 NEURONAS_SALIDA = 1
 PORCEN_EJ_TEST = 0.1
 PORCEN_EJ_VAL = 0.1
-EPSILON = 0.01
+EPSILON = 0.001
 EJEMPLOS_CANT = dataset_size(PORCEN_EJ_TEST)
 EJEMPLOS_TEST = int(dataset_size(PORCEN_EJ_TEST) * PORCEN_EJ_TEST)
 EJEMPLOS_VAL = int((EJEMPLOS_CANT - EJEMPLOS_TEST) * PORCEN_EJ_VAL)
@@ -294,7 +294,7 @@ for e in range(0, EPOCHS):
         calculo_salidas(Wji, Wkj, x, y, z)
         bp(Wji, Wkj, x, y, z, t)
    #Escoger si se quiere usar o no la validacion     
-   # tasa_aciertos[e] = calcula_rendimiento_val(ejemplos, Wji, Wkj, mostrar_e_s)
+    #tasa_aciertos[e] = calcula_rendimiento_val(ejemplos, Wji, Wkj, mostrar_e_s)
     tasa_aciertos[e] = calcula_rendimiento(ejemplos, Wji, Wkj, mostrar_e_s)
     print('Epoch ', e, ': ', tasa_aciertos[e], '\n')
     dataset_t, ejemplos = genera_data(PORCEN_EJ_TEST)
