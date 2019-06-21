@@ -4,7 +4,7 @@ from matplotlib import pyplot
 from pendulo_dataset import genera_pendulo, training, test, validation
 
 # Definición de parámetros iniciales
-pos = - math.pi / 3
+pos = math.pi / 3
 vel = math.pi / 4
 ac = 0
 Fsal = 0
@@ -30,12 +30,15 @@ plot_velocidad.append(vel)
 plot_aceleracion.append(ac)
 plot_fuerza.append(Fsal)
 
+# Generación del dataset con lógica difusa
 print('\nGENERANDO DATASET...\n')
 dataset_pendulo, dataset_pendulo_norm = genera_pendulo()
 
+# Entrenamiento de la red
 print('ENTRENANDO RED...\n')
 Wji, Wkj = training(dataset_pendulo, dataset_pendulo_norm)
 
+# Validación de la red
 print('VALIDANDO...\n')
 validation(dataset_pendulo, dataset_pendulo_norm, Wji, Wkj)
 
@@ -60,15 +63,11 @@ while t <= 30:
         pos = pos - 2 * math.pi
         print(str(pos), "", str(vel), "", str(ac))
         print("")
-        # vel = - vel
-        # ac = - ac
     elif pos < -math.pi:
         print(str(pos), "", str(vel), "", str(ac), "")
         pos = pos + 2 * math.pi
         print(str(pos), "", str(vel), "", str(ac))
         print("")
-        # vel = - vel
-        # ac = - ac
     t = t + dt
 
     plot_posicion.append(pos)
