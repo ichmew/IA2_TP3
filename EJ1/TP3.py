@@ -11,23 +11,22 @@
 #
 
 import math
-import matplotlib
+from matplotlib import pyplot as plt
 import numpy as np
 from datataset import genera_data
 from datataset import dataset_size
-from matplotlib import pyplot
 
 # Definición de hiperparámetros de la red
 NEURONAS_ENTRADA = 4
-NEURONAS_CAPA_OCULTA = 40
+NEURONAS_CAPA_OCULTA = 20
 NEURONAS_SALIDA = 1
 PORCEN_EJ_TEST = 0.1
 PORCEN_EJ_VAL = 0.1
-EPSILON = 0.005  # Se reemplaza abajo en la línea 244
+EPSILON = 0.01
 EJEMPLOS_CANT = dataset_size(PORCEN_EJ_TEST)
 EJEMPLOS_TEST = int(dataset_size(PORCEN_EJ_TEST) * PORCEN_EJ_TEST)
 EJEMPLOS_VAL = int((EJEMPLOS_CANT - EJEMPLOS_TEST) * PORCEN_EJ_VAL)
-EPOCHS = 10
+EPOCHS = 100
 CANTIDAD_ENTRADAS_SALIDAS = 1  # depende del dataset, es para el t
 mostrar_e_s = 0
 
@@ -94,12 +93,13 @@ def calculo_salidas(Wji, Wkj, x, y, z):
         for j in range(0, NEURONAS_CAPA_OCULTA):
             entrada_z += Wkj[j][k] * y[j]
         # Sesgo de las neuronas de la cada de salida
-        entrada_z -= Wkj[NEURONAS_CAPA_OCULTA - 1][k]
+        entrada_z -= 1
+        # entrada_z -= Wkj[NEURONAS_CAPA_OCULTA - 1][k]
         # Valor de salidad de la neurona k
         z[k] = g(entrada_z)
 
 
-def bp(Wji, Wjk, x, y, z, t):
+def bp(Wji, Wkj, x, y, z, t):
     # Se encarga de actualizar los pesos sinápticos
 
     delta_mu_k = np.zeros(NEURONAS_SALIDA)
@@ -129,8 +129,11 @@ def bp(Wji, Wjk, x, y, z, t):
         Wji[NEURONAS_ENTRADA - 1][j] += EPSILON * delta_mu_j * -1
 
 
-def calcula_rendimiento(ejemplos, Wji, Wkj, mostrar_e_s, t):
-    # Se encarga de calcular la tasa de aciertos de cada epoch
+
+
+def calcula_rendimiento_val(ejemplos, Wji, Wkj, mostrar_e_s):
+    # Se encarga de calcular la tasa de aciertos del conjunto de validación
+    # de cada epoch
 
     aciertos = 0
     ejemplo = 0
@@ -158,15 +161,13 @@ def calcula_rendimiento(ejemplos, Wji, Wkj, mostrar_e_s, t):
         # Verificación de aciertos
         error = 0
         if mostrar_e_s == 1:
-            print(str((ejemplo + 1)), '. z = [')
+            print(str((ejemplo + 1)), '. z=[')
         for k in range(0, NEURONAS_SALIDA):
             error += round(pow(pow(t[k] - z[k], 2), 0.5))
-            # print(t[k])
             if mostrar_e_s == 1:
                 print(str(z[k]))
         if mostrar_e_s == 1:
-            print(']')
-            print('   t = [')
+            print('] -- t=[')
             for k in range(0, NEURONAS_SALIDA):
                 print(str(t[k]))
             print(']\n')
@@ -176,6 +177,56 @@ def calcula_rendimiento(ejemplos, Wji, Wkj, mostrar_e_s, t):
     # Calculamos la tasa de aciertos
     tasa_aciertos = aciertos / EJEMPLOS_VAL
     return tasa_aciertos
+
+
+def calcula_rendimiento(ejemplos, Wji, Wkj, mostrar_e_s):
+    # Se encarga de calcular la tasa de aciertos de cada epoch
+
+    aciertos = 0
+    ejemplo = 0
+    y = np.zeros(NEURONAS_CAPA_OCULTA)
+    z = np.zeros(NEURONAS_SALIDA)
+    for mu in range(0, cant_ej_training):
+        t = dataset_t[mu][:]
+        for i in range(0, NEURONAS_ENTRADA):
+            x[i] = ejemplos[mu][i]
+        calculo_salidas(Wji, Wkj, x, y, z)
+        # Si usamos sólo una neurona, saltamos directamente (es necesario
+        # comentar lo que están en el medio) a la verificación de errores.
+        # Utilizamos para ello el z de calculo_salidas y el t del dataset.
+        '''max = z[0]
+        for k in range(1, NEURONAS_SALIDA):
+            if max < z[k]:
+                max = z[k]
+        for k in range(0, NEURONAS_SALIDA):
+            if max != z[k]:
+                z[k] = 0
+            else:
+                z[k] = 1.0
+        t = np.zeros(NEURONAS_SALIDA)
+        t[int(dataset_t[mu - 1])] = 1'''
+        # Verificación de aciertos
+        error = 0
+        if mostrar_e_s == 1:
+            print(str((ejemplo + 1)), '. z = [')
+        for k in range(0, NEURONAS_SALIDA):
+            error += round(pow(pow(t[k] - z[k], 2), 0.5))
+      
+            if mostrar_e_s == 1:
+                print(str(z[k]))
+        if mostrar_e_s == 1:
+            print('] -- t=[')
+
+            for k in range(0, NEURONAS_SALIDA):
+                print(str(t[k]))
+            print(']\n')
+            ejemplo = ejemplo + 1
+        if error == 0:
+            aciertos = aciertos + 1
+    # Calculamos la tasa de aciertos
+    tasa_aciertos = aciertos / cant_ej_training
+    return tasa_aciertos
+
 
 
 def calcula_final(ejemplos, Wji, Wkj, mostrar_e_s):
@@ -226,64 +277,34 @@ def calcula_final(ejemplos, Wji, Wkj, mostrar_e_s):
     return tasa_aciertos
 
 
+
 # MAIN ------------------------------------------------------------------------
 t = np.zeros([EJEMPLOS_CANT, NEURONAS_SALIDA])
 Wji = np.random.rand(NEURONAS_ENTRADA, NEURONAS_CAPA_OCULTA)
 Wkj = np.random.rand(NEURONAS_CAPA_OCULTA, NEURONAS_SALIDA)
+tasa_aciertos= np.zeros(EPOCHS)
+epocas= range(EPOCHS)
 dataset_t, ejemplos = genera_data(PORCEN_EJ_TEST)
+for e in range(0, EPOCHS):
+    # TRAINING AND VALIDATION (descomentar la linea de abajo si se quiere usar la validation, es para el shufleo de datos cada epoca)
+    # dataset_t, ejemplos = genera_data(PORCEN_EJ_TEST)
+    for mu in range(0, cant_ej_training):
+        x = ejemplos[mu][:]
+        t = dataset_t[mu][:]
+        calculo_salidas(Wji, Wkj, x, y, z)
+        bp(Wji, Wkj, x, y, z, t)
+   #Escoger si se quiere usar o no la validacion     
+   # tasa_aciertos[e] = calcula_rendimiento_val(ejemplos, Wji, Wkj, mostrar_e_s)
+    tasa_aciertos[e] = calcula_rendimiento(ejemplos, Wji, Wkj, mostrar_e_s)
+    print('Epoch ', e, ': ', tasa_aciertos[e], '\n')
+    dataset_t, ejemplos = genera_data(PORCEN_EJ_TEST)
 
-plot_epsilon = []
-plot_test = []
-plot_EPOCHS = []
-plot_aciertos = []
-plot_resultado = []
-
-# Se puede ir bajando el ritmo de aprendizaje cada cierta cantidad de épocas???
-# eps_varios = [0.001, 0.002, 0.003, 0.004, 0.005, 0.010, 0.015, 0.020, 0.015, 0.010, 0.005, 0.004, 0.003, 0.002, 0.001]
-# eps_varios = [0.005, 0.010, 0.015, 0.020, 0.025, 0.030, 0.035, 0.040, 0.045, 0.050]
-eps_varios = [0.002]
-for q in range(0, len(eps_varios)):
-    EPSILON = eps_varios[q]
-    plot_epsilon.append(eps_varios[q])
-    # plot_EPOCHS = []
-    # plot_aciertos = []
-    # t = np.zeros([EJEMPLOS_CANT, NEURONAS_SALIDA])
-    # Wji = np.random.rand(NEURONAS_ENTRADA, NEURONAS_CAPA_OCULTA)
-    # Wkj = np.random.rand(NEURONAS_CAPA_OCULTA, NEURONAS_SALIDA)
-    # Wji = np.zeros([NEURONAS_ENTRADA, NEURONAS_CAPA_OCULTA])
-    # Wkj = np.zeros([NEURONAS_CAPA_OCULTA, NEURONAS_SALIDA])
-    for e in range(0, EPOCHS):
-        # TRAINING
-        for mu in range(0, EJEMPLOS_CANT - EJEMPLOS_TEST):
-            x = ejemplos[mu][:]
-            t = dataset_t[mu][:]
-            calculo_salidas(Wji, Wkj, x, y, z)
-            bp(Wji, Wkj, x, y, z, t)
-        tasa_aciertos = calcula_rendimiento(ejemplos, Wji, Wkj, mostrar_e_s, t)
-        print('Epoch ', e, ': ', tasa_aciertos, '\n')
-        plot_EPOCHS.append(e + 20 * q)
-        plot_aciertos.append(tasa_aciertos)
-        dataset_t, ejemplos = genera_data(PORCEN_EJ_TEST)
-
-    # waiting = input()
-    # TEST / VALIDATION
-    error = 0
-    tasa_aciertos_test = calcula_final(ejemplos, Wji, Wkj, mostrar_e_s)
-    print('\nTasa de aciertos test = ', tasa_aciertos_test)
-    plot_test.append(tasa_aciertos_test)
-    plot_resultado = np.zeros(EPOCHS) + tasa_aciertos_test
-
-    # print('\nTest final:')
-pyplot.figure(q)
-pyplot.plot(plot_EPOCHS, plot_aciertos)
-pyplot.plot(plot_EPOCHS, plot_resultado)
-pyplot.ylabel('Tasa de aciertos')
-pyplot.xlabel('EPOCHS')
-
-
-pyplot.figure(q + 1)
-pyplot.plot(plot_epsilon, plot_test)
-pyplot.ylabel('Tasa de aciertos test')
-pyplot.xlabel('Epsilon')
-
-pyplot.show()
+# waiting = input()
+# TEST / VALIDATION
+error = 0
+tasa_aciertos_test = calcula_final(ejemplos, Wji, Wkj, mostrar_e_s)
+print('\nTasa de aciertos test = ', tasa_aciertos_test)
+plt.plot(epocas,tasa_aciertos)
+plt.ylabel('Tasa de Aciertos')
+plt.xlabel('Epoca')
+plt.show()
